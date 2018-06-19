@@ -78,7 +78,7 @@ std_backup_setup() {
 		$mkdir -p "$HOME/local/backups";
 	fi
 	echo BACKUP_BASE=$HOME/local/backups > $HOME/.backup.cfg
-	echo BACKUP_BASE_KEEP=yes >> $HOME/.backup.cfg
+	echo BACKUP_BASE_KEEP=no >> $HOME/.backup.cfg
 	echo BACKUP_LOCATIONS=2 >> $HOME/.backup.cfg
 	echo BACKUP_LOCATION1=bayliss@kgmirror:~/critical_backup >> $HOME/.backup.cfg
 	echo BACKUP_LOCATION2=bayliss@gpmirror:~/critical_backup >> $HOME/.backup.cfg
@@ -93,6 +93,12 @@ std_backup_setup() {
 	echo done
 }
 
+check_backup_size() {
+	prove xargs du cat
+
+	cat "$HOME/.backup" | $xargs $du -hs
+}
+
 # uses configuration, see std_backup_setup for examples
 do_backup() {
 	# sudo is so we can specify root read only files to backup and it will work
@@ -101,7 +107,7 @@ do_backup() {
 #working directory:
 #	BACKUP_BASE
 #working directory no delete (don't remove the files made in this directory, thus making an endless list of backups based on dates in this location)
-#	BACKUP_BASE_KEEP="yes|no" (left out is blank)
+#	BACKUP_BASE_KEEP="yes|no" (left out is no)
 #backup locations
 #	BACKUP_LOCATIONS=3
 #	BACKUP_LOCATION1=/path
@@ -109,9 +115,9 @@ do_backup() {
 #	BACKUP_LOCATION3=dude@place2:/directory2
 #scp options
 #	SCPOPTIONS="-i $HOME/.ssh/id_rsa"
-	load "$HOME/.backup.cfg" BACKUP_BASE BACKUP_LOCATIONS
+	load "$HOME/.backup.cfg" BACKUP_BASE BACKUP_LOCATIONS BACKUP_BASE_KEEP
 
-	local _X _filename _oldifs _nowfile _prevfile _files
+	local _X _filename _nowfile _prevfile _files
 	#
 	# make a date based backup filename for tar to stuff data into
 	_filename=`$date +"$BACKUP_BASE/$HOSTNAME.%d-%m-%Y.tar"`;
@@ -130,16 +136,6 @@ do_backup() {
 	echo zipping data...
 	$bzip2 "$_filename";
 	_filename="$_filename.bz2"
-
-	#
-	# show the user what's using the most space in the backup
-	_oldifs=$IFS
-	IFS="
-";
-	while read _X; do
-		$du -ks "$_X"
-	done < $HOME/.backup | $sort -nr
-	IFS=$_oldifs;
 
 	#
 	# get the two files ready in the working directory so we can copy them
@@ -172,6 +168,13 @@ do_backup() {
 		fi
 		_X=$(( $_X + 1 ));
 	done
+	echo
+	echo final backup file size follows
+	$du -h "$_nowfile";
+	# clean up after us!
+	if test "${BACKUP_BASE_KEEP:-no}" = "no"; then
+		$rm -f $_files $_filename;
+	fi
 	echo
 	echo done
 }
@@ -214,12 +217,12 @@ setup_tcplisten() {
 	start_file="/etc/rc.d/tcplisten";
 	echo creating $start_file
 	tmp_name="/tmp/tcplisten.init";
-	$sudo $printf '#!/bin/sh\n#\n# PROVIDES: tcplisten\n\n. /etc/rc.subr\n\nname="tcplisten"\ndesc="tcp messages to syslog"\n' > $tmp_name
-	$sudo $printf 'pidfile="/var/run/tcplisten.pid"\n' >> $tmp_name
-	$sudo $printf "command=\"$HOME/bin/tcplisten\"\n" >> $tmp_name
-	$sudo $printf "command_args=\"-p \$pidfile -f $HOME/var/log/events $HOME/etc/tcplisten.conf\"\n" >> $tmp_name
-	$sudo $printf 'rcvar="tcplisten_enable"\n' >> $tmp_name
-	$sudo $printf '\nload_rc_config $name\nrun_rc_command "$1"\n' >> $tmp_name
+	$printf '#!/bin/sh\n#\n# PROVIDES: tcplisten\n\n. /etc/rc.subr\n\nname="tcplisten"\ndesc="tcp messages to syslog"\n' > $tmp_name
+	$printf 'pidfile="/var/run/tcplisten.pid"\n' >> $tmp_name
+	$printf "command=\"$HOME/bin/tcplisten\"\n" >> $tmp_name
+	$printf "command_args=\"-p \$pidfile -f $HOME/var/log/events $HOME/etc/tcplisten.conf\"\n" >> $tmp_name
+	$printf 'rcvar="tcplisten_enable"\n' >> $tmp_name
+	$printf '\nload_rc_config $name\nrun_rc_command "$1"\n' >> $tmp_name
 	$sudo $mv $tmp_name $start_file
 	$sudo $chmod 555 $start_file
 	echo enabling tcplisten at boot via /etc/rc.conf.d/tcplisten
@@ -246,12 +249,11 @@ case "$1" in
 		;;
 	backup_std_setup)	std_backup_setup
 				;;
+	cbz)	check_backup_size;
+		;;
 	cl)	prove sudo openconnect;
 		echo $sudo $openconnect -u bayliss https://sas.qut.edu.au/cl
 		;;
-	regetself)	prove scp
-			$scp bayliss@safety.net.qut.edu.au:/home/bayliss/bin/scripts/here $0
-			;;
 	setup_pflog2syslog)	prove $HOME/bin/pflog2syslog
 				setup_pflog2syslog;
 				;;
@@ -268,8 +270,8 @@ case "$1" in
 		echo commands
 		echo backup: backup data locally based on configuration
 		echo backup_std_setup: setup configuration for the usual backup process on a given host
+		echo cbz: check backup size \(bytes in each space being backed up\)
 		echo cl: start the corporate limited vpn
-		echo regetself: redownload this script
 		echo setup_pflog2syslog: setup pflog2syslog at boot and starting it now \(FreeBSD only\)
 		echo setup_tcplisten: setup tcplisten at boot and starting it now \(FreeBSD only\)
 		echo startx: start the regular X stuff
