@@ -1,0 +1,277 @@
+#!/bin/sh
+#
+# kjbayliss, oct 2017
+#
+# Stuff done on this host, right here.
+#
+# Keep in mind that the OS might be different, that dependancies are doom and everything needs confirming
+#
+# $Id: here,v 1.6 2018/01/16 06:38:03 bayliss Exp $
+
+N=here
+if test -z "$HOSTNAME"; then
+	HOSTNAME=`hostname -s 2> /dev/null`;
+fi
+
+
+#
+# operating system is important
+# tested ones: FreeBSD, Linux
+OS="`uname 2> /dev/null`";
+if test -z "$OS"; then
+	echo $N error: unable to determine OS, you need to change the code
+	exit 1;
+fi
+
+# find an executable thing or explode
+prove() {
+	local _X _Y;
+	for _Y in $*; do
+		_X=`which $_Y`;
+		if test $? -ne 0; then
+			echo $N error: unable to prove the functionality of \"$_Y\"
+			exit 1;
+		fi
+		if test "$OS" = "Linux"; then
+			if test "${_X%% *}" = "alias"; then
+				_X=$_Y;
+			fi
+		fi
+		if test "${_Y##*/}" != "$_Y"; then	# they provided full path (so don't use a full path as a variable name!)
+			eval "${_Y##*/}=$_X";
+		else
+			eval "$_Y=$_X";
+		fi
+	done
+}
+
+# read a file, eval each line (like a config file) and also check that a certain variable is defined afterwards
+# $0(file,variable...)
+load() {
+	local _X _Y;
+	if test ! -r "$1"; then
+		echo $N load error: unable to read file requested for loading \"$1\"
+		exit 1;
+	fi
+	. "$1"
+	if test ! -z "$2"; then
+		shift;
+		for _Y in $*; do
+			testcode="_X=$""$_Y"
+			eval "$testcode"
+			if test -z "$_X"; then
+				echo $N load error: missing expected loaded configuration variable \"$_Y\"
+				exit 1;
+			fi
+		done
+	fi
+}
+
+std_backup_setup() {
+	prove mkdir
+	if test -r "$HOME/.backup.cfg"; then
+		echo $N error: $HOME/.backup.cfg already exists, set it up yourself
+		exit 1;
+	fi
+
+	if test ! -d "$HOME/local/backups"; then
+		$mkdir -p "$HOME/local/backups";
+	fi
+	echo BACKUP_BASE=$HOME/local/backups > $HOME/.backup.cfg
+	echo BACKUP_BASE_KEEP=yes >> $HOME/.backup.cfg
+	echo BACKUP_LOCATIONS=2 >> $HOME/.backup.cfg
+	echo BACKUP_LOCATION1=bayliss@kgmirror:~/critical_backup >> $HOME/.backup.cfg
+	echo BACKUP_LOCATION2=bayliss@gpmirror:~/critical_backup >> $HOME/.backup.cfg
+	# need an ssh key we expect
+	if test ! -r "$HOME/.ssh/id_rsa"; then
+		echo $N error: $HOME/.ssh/id_rsa is missing, standard config will not include which ssh key
+	else	
+		echo SCPOPTIONS=\"-i $HOME/.ssh/id_rsa\" >> $HOME/.backup.cfg
+	fi
+	cat $HOME/.backup.cfg
+	echo
+	echo done
+}
+
+# uses configuration, see std_backup_setup for examples
+do_backup() {
+	# sudo is so we can specify root read only files to backup and it will work
+	prove date tar rm sudo du sort cp bzip2 scp
+
+#working directory:
+#	BACKUP_BASE
+#working directory no delete (don't remove the files made in this directory, thus making an endless list of backups based on dates in this location)
+#	BACKUP_BASE_KEEP="yes|no" (left out is blank)
+#backup locations
+#	BACKUP_LOCATIONS=3
+#	BACKUP_LOCATION1=/path
+#	BACKUP_LOCATION2=dude@place:/directory
+#	BACKUP_LOCATION3=dude@place2:/directory2
+#scp options
+#	SCPOPTIONS="-i $HOME/.ssh/id_rsa"
+	load "$HOME/.backup.cfg" BACKUP_BASE BACKUP_LOCATIONS
+
+	local _X _filename _oldifs _nowfile _prevfile _files
+	#
+	# make a date based backup filename for tar to stuff data into
+	_filename=`$date +"$BACKUP_BASE/$HOSTNAME.%d-%m-%Y.tar"`;
+	if test -r "$_filename"; then
+		echo $N: warning, replacing most recent backup
+		$rm $_filename
+	fi
+	#
+	# tar the data up
+	$sudo $tar -cvf $_filename -T $HOME/.backup
+	if test ! -r "$_filename"; then
+		echo $N error: tar did not produce a file, something wrong
+		exit 1;
+	fi
+	test -r "$_filename.bz2" && $rm -f "$_filename.bz2"
+	echo zipping data...
+	$bzip2 "$_filename";
+	_filename="$_filename.bz2"
+
+	#
+	# show the user what's using the most space in the backup
+	_oldifs=$IFS
+	IFS="
+";
+	while read _X; do
+		$du -ks "$_X"
+	done < $HOME/.backup | $sort -nr
+	IFS=$_oldifs;
+
+	#
+	# get the two files ready in the working directory so we can copy them
+	_nowfile="$BACKUP_BASE/$HOSTNAME.latest.tar.bz2";
+	_prevfile="$BACKUP_BASE/$HOSTNAME.previous.tar.bz2";
+	_files="$_nowfile";
+	if test -r "$_nowfile"; then
+		$cp "$_nowfile" "$_prevfile"
+		_files="$_files $_prevfile";
+	fi
+	$cp "$_filename" "$_nowfile"
+
+	#
+	# copy the data to where they said to
+	_X=1;
+	echo
+	echo "files: $_files";
+	echo
+	while test "$_X" -le "$BACKUP_LOCATIONS"; do
+		eval "_Y=$""BACKUP_LOCATION$_X";
+		if test -z "${_Y%%/*}"; then
+			echo copy to directory: $_Y
+			$cp $_files $_Y
+		elif test "${_Y%%@*}" != "$_Y"; then
+			echo scp to $_Y
+			$scp $SCPOPTIONS $_files $_Y
+		else
+			echo $N error: unknown backup type/destination \"$_Y\"
+			exit 1;
+		fi
+		_X=$(( $_X + 1 ));
+	done
+	echo
+	echo done
+}
+
+#
+# create a startup script for pflog2syslog and start it at boot
+setup_pflog2syslog() {
+
+	prove printf sudo chmod mv
+	if test "$OS" != "FreeBSD"; then
+		echo $N error: FreeBSD only
+		exit 1;
+	fi
+	start_file="/etc/rc.d/pflog2syslog";
+	echo creating $start_file
+	tmp_name="/tmp/pflog2syslog.init";
+	$sudo $printf '#!/bin/sh\n#\n# PROVIDES: pflog2syslog\n\n. /etc/rc.subr\n\nname="pflog2syslog"\ndesc="copies pflog entries into syslog"\n' > $tmp_name
+	$sudo $printf 'pidfile="/var/run/pflog2syslog.pid"\n' >> $tmp_name
+	$sudo $printf "command=\"$HOME/bin/pflog2syslog\"\n" >> $tmp_name
+	$sudo $printf 'command_args="-D -p $pidfile /var/log/pflog"\nrcvar="pflog2syslog_enable"\n' >> $tmp_name
+	$sudo $printf '\nload_rc_config $name\nrun_rc_command "$1"\n' >> $tmp_name
+	$sudo $mv $tmp_name $start_file
+	$sudo $chmod 555 $start_file
+	echo enabling pflog2syslog at boot via /etc/rc.conf.d/pflog2syslog
+	$printf 'pflog2syslog_enable="YES"\n' > /tmp/pflog2syslog
+	$sudo $mv /tmp/pflog2syslog /etc/rc.conf.d/pflog2syslog
+	echo starting it now
+	$sudo service pflog2syslog start
+}
+
+#
+# create a startup script for tcplisten and start it at boot
+setup_tcplisten() {
+
+	prove printf sudo chmod mv
+	if test "$OS" != "FreeBSD"; then
+		echo $N error: FreeBSD only
+		exit 1;
+	fi
+	start_file="/etc/rc.d/tcplisten";
+	echo creating $start_file
+	tmp_name="/tmp/tcplisten.init";
+	$sudo $printf '#!/bin/sh\n#\n# PROVIDES: tcplisten\n\n. /etc/rc.subr\n\nname="tcplisten"\ndesc="tcp messages to syslog"\n' > $tmp_name
+	$sudo $printf 'pidfile="/var/run/tcplisten.pid"\n' >> $tmp_name
+	$sudo $printf "command=\"$HOME/bin/tcplisten\"\n" >> $tmp_name
+	$sudo $printf "command_args=\"-p \$pidfile -f $HOME/var/log/events $HOME/etc/tcplisten.conf\"\n" >> $tmp_name
+	$sudo $printf 'rcvar="tcplisten_enable"\n' >> $tmp_name
+	$sudo $printf '\nload_rc_config $name\nrun_rc_command "$1"\n' >> $tmp_name
+	$sudo $mv $tmp_name $start_file
+	$sudo $chmod 555 $start_file
+	echo enabling tcplisten at boot via /etc/rc.conf.d/tcplisten
+	$printf 'tcplisten_enable="YES"\n' > /tmp/tcplisten
+	$sudo $mv /tmp/tcplisten /etc/rc.conf.d/tcplisten
+	#echo starting it now
+	#$sudo service pflog2syslog start
+}
+
+case "$1" in
+	backup)	if test ! -r "$HOME/.backup"; then
+			echo ======= ERROR: missing list of files to backup =======
+			echo put a list of places to backup into $HOME/.backup
+			echo
+			echo \# cat $HOME/.backup
+			echo \$HOME
+			echo /bin/\*
+			echo \#
+			echo ======= ERROR no backup performed =======
+
+			exit 1;
+		fi
+		do_backup;
+		;;
+	backup_std_setup)	std_backup_setup
+				;;
+	cl)	prove sudo openconnect;
+		echo $sudo $openconnect -u bayliss https://sas.qut.edu.au/cl
+		;;
+	regetself)	prove scp
+			$scp bayliss@safety.net.qut.edu.au:/home/bayliss/bin/scripts/here $0
+			;;
+	setup_pflog2syslog)	prove $HOME/bin/pflog2syslog
+				setup_pflog2syslog;
+				;;
+	setup_tcplisten)	prove $HOME/bin/tcplisten
+				setup_tcplisten;
+				;;
+	startx)	prove xterm xclock xload messages;
+		$xterm -fn 9x15 -bg cyan4 -fg green  -T messages -n messages +sb -geometry 126x8+436-0 -e $messages &
+		$xclock -digital -geometry 158x19+0-0 -update 1 -strftime '%a %b %e %k:%M' -padding 1 &
+		$xload -bg cyan4 -fg red -update 5 -label '' -geometry 265x60+165-0 &
+		;;
+	*)	echo here command
+		echo
+		echo commands
+		echo backup: backup data locally based on configuration
+		echo backup_std_setup: setup configuration for the usual backup process on a given host
+		echo cl: start the corporate limited vpn
+		echo regetself: redownload this script
+		echo setup_pflog2syslog: setup pflog2syslog at boot and starting it now \(FreeBSD only\)
+		echo setup_tcplisten: setup tcplisten at boot and starting it now \(FreeBSD only\)
+		echo startx: start the regular X stuff
+		;;
+esac
