@@ -232,6 +232,58 @@ setup_tcplisten() {
 	#$sudo service pflog2syslog start
 }
 
+battery_path() {
+	d="";
+	for dir in "/sys/class/power_supply/BAT0"; do
+		if test -r "$dir/capacity" -a -r "$dir/status"; then
+			d=$dir;
+			break;
+		fi
+	done
+	echo $d
+}
+
+battery_status() {
+	if test -z "$cat"; then
+		prove cat;
+	fi
+	if test ! -d "$1"; then
+		d=$( battery_path );
+	else
+		d=$1;	
+	fi
+	test -r "$d/status" && $cat "$d/status";
+}
+
+battery_capacity() {
+	if test -z "$cat"; then
+		prove cat;
+	fi
+	if test ! -d "$1"; then
+		d=$( battery_path );
+	else
+		d=$1;	
+	fi
+	if test -r "$d/capacity"; then
+		val=`$cat "$d/capacity"`;
+		echo $val\%
+	fi
+}
+
+battery_watch() {
+	d=$( battery_path );
+	if test ! -d "$d"; then
+		echo $N error: unable to locate the battery data
+		exit 1;
+	fi
+	while test -r "/"; do
+		status=$( battery_status "$d" );
+		capacity=$( battery_capacity "$d" );
+		echo $status, $capacity
+		sleep 30;
+	done
+}
+
 case "$1" in
 	backup)	if test ! -r "$HOME/.backup"; then
 			echo ======= ERROR: missing list of files to backup =======
@@ -249,6 +301,12 @@ case "$1" in
 		;;
 	backup_std_setup)	std_backup_setup
 				;;
+	battery_status)	battery_status;
+			;;
+	battery_capacity)	battery_capacity;
+			;;
+	battery_watch)	battery_watch;
+			;;
 	cbz)	check_backup_size;
 		;;
 	cl)	prove sudo openconnect;
@@ -270,6 +328,9 @@ case "$1" in
 		echo commands
 		echo backup: backup data locally based on configuration
 		echo backup_std_setup: setup configuration for the usual backup process on a given host
+		echo battery_capacity: print battery capacity to stdout
+		echo battery_status: print battery status to stdout
+		echo battery_watch: endless loop of battery_capacity+battery_status with 30s repeat delay
 		echo cbz: check backup size \(bytes in each space being backed up\)
 		echo cl: start the corporate limited vpn
 		echo setup_pflog2syslog: setup pflog2syslog at boot and starting it now \(FreeBSD only\)
