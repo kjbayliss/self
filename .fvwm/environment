@@ -1,0 +1,2 @@
+SetEnv menufvwm $HOME/bin/menufvwm
+SetEnv stdxterm "xterm -sb -sl 500 -fn 8x13"

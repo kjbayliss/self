@@ -1,0 +1,116 @@
+# define some standard text parameters to shorten the data below
+var sxterm Exec xterm -sb -fn 9x15
+var B (bayliss)
+var N (nocteam)
+var P - production
+var D - development
+var SB -l bayliss
+var SA -l nocteam
+# itnteam cut-through
+var S /home/bayliss/bin/scripts/itnteam_ssh
+# bastion host for bayliss cut-through
+var T /home/bayliss/bin/scripts/bounce_through_bastion.sh
+#
+# bgcolours (for services) : reverse for bayliss
+#ias
+var ic -bg DarkTurquoise -fg black
+var icr -bg black -fg DarkTurquoise
+#radius
+var rc -bg pink -fg black
+var rcr -bg black -fg pink
+# dns
+var dc -bg orange -fg black
+var dcr -fg orange -bg black
+# proxies
+var pc -bg purple -fg green
+# radiation
+var wcr -bg salmon -fg black
+# nocmgt01
+var n1c -bg black -fg green
+var n1cr -bg green -fg black
+# nocmgt02
+var n2c -bg black -fg darkgreen
+var n2cr -bg darkgreen -fg black
+# q
+var qcr -bg black -fg white
+
+HostAccess:title:Host Access
+HostAccess:submenu:ba:&bayliss access
+	ba:destroy
+	ba:cmd:MissingSubmenuFunction HostAccessSubMenu
+	ba:popdown
+	ba:submenu:bdns:&dns
+		bdns:destroy
+		bdns:cmd:MissingSubmenuFunction HostAccessSubMenu
+		bdns:popdown
+		bdns:cmd:"qutextdns01" $sxterm$ $dcr$ -T "qutextdns01$B$ $P$" -e ssh $SB$ 131.181.108.130 &
+		bdns:cmd:"qutextdns02" $sxterm$ $dcr$ -T "qutextdns02$B$ $P$" -e ssh $SB$ 131.181.108.131 &
+		bdns:cmd:"ns&1" $sxterm$ $dcr$ -T "ns1(bayliss) $P$" -e ssh $SB$ bayliss@131.181.108.179 &
+		bdns:cmd:"ns&2" $sxterm$ $dcr$ -T "ns2(bayliss) $P$" -e ssh $SB$ bayliss@131.181.108.180 &
+		bdns:cmd:"ns&3" $sxterm$ $dcr$ -T "ns3(root) $P$" -e ssh $SB$ root@132.234.1.6 &
+	ba:submenu:bi:&ias
+		bi:destroy
+		bi:cmd:MissingSubmenuFunction HostAccessSubMenu
+		bi:popdown
+		bi:cmd:"ias-cisco0&1" $sxterm$ $icr$ -T "ias-cisco01$B$ $P$" -e ssh $SB$ 131.181.185.35 &
+		bi:cmd:"ias-cisco0&2" $sxterm$ $icr$ -T "ias-cisco02$B$ $P$" -e ssh $SB$ 131.181.185.36 &
+	ba:submenu:bm:&management
+		bm:destroy
+		bm:cmd:MissingSubmenuFunction HostAccessSubMenu
+		bm:popdown
+		bm:cmd:"&gpmirror" $sxterm$ $qcr$ -T "gpmirror$B$ $D$" -e ssh $SB$ 131.181.184.196 &
+		bm:cmd:"&kgmirror" $sxterm$ $qcr$ -T "kgmirror$B$ $D$" -e ssh $SB$ 131.181.188.179 &
+		bm:cmd:"nocmgt0&1" $sxterm$ $n1cr$ -T "nocmgt01$B$ $D$" -e ssh $SB$ 131.181.188.167 &
+		bm:cmd:"nocmgt0&2" $sxterm$ $n2cr$ -T "nocmgt02$B$ $D$" -e ssh $SB$ 131.181.188.175 &
+		bm:cmd:"&statseeker" $sxterm$ $qcr$ -T "statseeker(statseeker) $D$" -e ssh $SB$ statseeker@131.181.188.165 &
+	ba:submenu:br:&radius
+		br:destroy
+		br:cmd:MissingSubmenuFunction HostAccessSubMenu
+		br:popdown
+		br:cmd:"radacct0&1 $B$" $sxterm$ $rcr$ -T "radacct01$B$ $D$" -e $T$ 131.181.107.178 &
+		br:cmd:"radacct0&2 $B$" $sxterm$ $rcr$ -T "radacct02$B$ $D$" -e $T$ 131.181.107.185 &
+		br:cmd:"radius0&5 $B$" $sxterm$ $rcr$ -T "radius05$B$ $P$" -e ssh $SB$ 131.181.108.225 &
+		br:cmd:"radius0&6 $B$" $sxterm$ $rcr$ -T "radius06$B$ $P$" -e ssh $SB$ 131.181.108.22 &
+	ba:submenu:bw:r&adiation
+		bw:destroy
+		bw:cmd:MissingSubmenuFunction HostAccessSubMenu
+		bw:popdown
+		bw:cmd:"&hseradiation $B$" $sxterm$ $wcr$ -T "hseradiation$B$ $P$" -e ssh $SB$ 131.181.184.147 &
+HostAccess:submenu:na:&nocteam access
+	na:destroy
+	na:cmd:MissingSubmenuFunction HostAccessSubMenu
+	na:popdown
+	na:submenu:ndns:&dns
+		ndns:destroy
+		ndns:cmd:MissingSubmenuFunction HostAccessSubMenu
+		ndns:popdown
+		ndns:cmd:"qutextdns0&1" $sxterm$ $dc$ -T "qutextdns01$N$ $P$" -e $S$ $SB$ 131.181.108.130 &
+		ndns:cmd:"qutextdns0&2" $sxterm$ $dc$ -T "qutextdns02$N$ $P$" -e $S$ $SB$ 131.181.108.131 &
+	nasubmenu:nm:&management
+		nm:destroy
+		nm:cmd:MissingSubmenuFunction HostAccessSubMenu
+		nm:popdown
+		nm:cmd:"nocm&gt01" $sxterm$ $n1c$ -T "nocmgt01$N$ $D$" -e ssh $SA$ nocmgt01.net.qut.edu.au &
+		nm:cmd:"nocmg&t02" $sxterm$ $n2c$ -T "nocmgt02$N$ $D$" -e ssh $SA$ nocmgt02.net.qut.edu.au &
+	na:submenu:np:&proxies
+		np:destroy
+		np:cmd:MissingSubmenuFunction HostAccessSubMenu
+		np:popdown
+		np:cmd:"nocproxy0&3" $sxterm$ $pc$ -T "nocproxy03$N$ $P$" -e ssh $SA$ nocproxy03.net.qut.edu.au &
+		np:cmd:"nocproxy0&4" $sxterm$ $pc$ -T "nocproxy04$N$ $P$" -e ssh $SA$ nocproxy04.net.qut.edu.au &
+		np:cmd:"nocproxy0&5" $sxterm$ $pc$ -T "nocproxy05$N$ $P$" -e ssh $SA$ nocproxy05.net.qut.edu.au &
+	na:submenu:nr:&radius
+		nr:destroy
+		nr:cmd:MissingSubmenuFunction HostAccessSubMenu
+		nr:popdown
+		nr:cmd:"radius0&3$N$" $sxterm$ $rc$ -T "radius03$N$ $P$" -e ssh $SA$ radius03.qut.edu.au &
+		nr:cmd:"radius0&4$N$" $sxterm$ $rc$ -T "radius04$N$ $P$" -e ssh $SA$ radius04.qut.edu.au &
+		nr:cmd:"radius0&5$N$" $sxterm$ $rc$ -T "radius05$N$ $P$" -e $S$ $SB$ radius05.qut.edu.au &
+		nr:cmd:"radius0&6$N$" $sxterm$ $rc$ -T "radius06$N$ $P$" -e $S$ $SB$ radius06.qut.edu.au &
+HostAccess:submenu:ra:&root access
+	ra:destroy
+	ra:cmd:MissingSubmenuFunction HostAccessSubMenu
+	ra:popdown
+	# next is not as root but no direct roor anymore and this is the path to the su command
+	ra:cmd:"s&tatseeker" $sxterm$ -bg black -fg green -T "statseeker(statseeker) $P$" -e ssh -2 -l statseeker statseeker.net.qut.edu.au &
+

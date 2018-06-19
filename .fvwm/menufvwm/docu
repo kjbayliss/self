@@ -1,0 +1,48 @@
+DocuAccess:title:Documentation
+DocuAccess:submenu:ciscodocu:&cisco
+DocuAccess:submenu:dnsdocu:&dns
+DocuAccess:submenu:iasdocu:&ias
+DocuAccess:submenu:userdocu:&users
+DocuAccess:submenu:vdcdocu:&vdc
+DocuAccess:submenu:peopledocu:&people
+DocuAccess:submenu:wirelessdocu:&wireless
+
+ciscodocu:destroy
+ciscodocu:cmd:MissingSubmenuFunction DocuAccessSubMenu
+ciscodocu:popdown
+ciscodocu:cmd:"&cmd reference" Exec xterm -sb -bg rgb:a9/e6/ff -fn 9x15 -T "cmd reference" -e lynx /home/bayliss/docs/anomalies/cisco/cmdref.html &
+ciscodocu:cmd:"&edit cmd reference" Exec xterm -sb -bg rgb:a9/e6/ff -fn 9x15 -T "edit cmdref" -e vi /home/bayliss/docs/anomalies/cisco/cmdref.html &
+ciscodocu:cmd:"&new FW context" Exec xterm -sb -bg rgb:a9/e6/ff -fn 9x15 -T "new FW context doco" -e vi /home/bayliss/docs/anomalies/cisco/new_fw_context.txt &
+
+dnsdocu:destroy
+dnsdocu:cmd:MissingSubmenuFunction DocuAccessSubMenu
+dnsdocu:popdown
+dnsdocu:cmd:"&permissions" Exec xterm -sb -bg rgb:a9/e6/ff -fn 9x15 -T "dns user pemissions" -e vi /home/bayliss/docs/anomalies/dns/permissions.txt &
+
+iasdocu:destroy
+iasdocu:cmd:MissingSubmenuFunction DocuAccessSubMenu
+iasdocu:popdown
+iasdocu:cmd:"&freesites" Exec xterm -sb -bg rgb:a9/e6/ff -fn 9x15 -T "freesite doco" -e vi /home/bayliss/docs/anomalies/ias/freesites.txt &
+iasdocu:cmd:"&SCE" Exec xterm -sb -bg rgb:a9/e6/ff -fn 9x15 -T "SCE doco" -e vi /home/bayliss/docs/anomalies/ias/SCE.txt &
+
+userdocu:destroy
+userdocu:cmd:MissingSubmenuFunction DocuAccessSubMenu
+userdocu:popdown
+userdocu:cmd:"&sud" Exec xterm -sb -bg grey -fn 9x15 -T "sud" -e vi /home/bayliss/docs/anomalies/users/sud.txt &
+
+vdcdocu:destroy
+vdcdocu:cmd:MissingSubmenuFunction DocuAccessSubMenu
+vdcdocu:popdown
+vdcdocu:cmd:"&hsrp" Exec xterm -sb -bg rgb:a9/e6/ff -fn 9x15 -T "vdc hsrp doco" -e vi /home/bayliss/docs/anomalies/vdc/hsrp.txt &
+vdcdocu:cmd:"&ospf" Exec xterm -sb -bg rgb:a9/e6/ff -fn 9x15 -T "vdc ospf doco" -e vi /home/bayliss/docs/anomalies/vdc/ospf.txt &
+
+wirelessdocu:destroy
+wirelessdocu:cmd:MissingSubmenuFunction DocuAccessSubMenu
+wirelessdocu:popdown
+wirelessdocu:cmd:"&reporting" Exec xterm -sb -bg rgb:a9/e6/ff -fn 9x15 -T "wireless reporting doco" -e vi /home/bayliss/docs/anomalies/wireless/reporting.txt &
+wirelessdocu:cmd:"&wcs" Exec xterm -sb -bg rgb:a9/e6/ff -fn 9x15 -T "wireless WCS doco" -e vi /home/bayliss/docs/anomalies/wireless/wcs.txt &
+
+peopledocu:destroy
+peopledocu:cmd:MissingSubmenuFunction DocuAccessSubMenu
+peopledocu:popdown
+peopledocu:cmd:"&leave notice" Exec xterm -sb -bg rgb:a9/e6/ff -fn 9x15 -T "leave notice" -e vi /home/bayliss/docs/anomalies/people/leave-notice.txt &
