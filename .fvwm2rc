@@ -60,6 +60,8 @@ Style "*personal*" HilightColorset 59,Colorset 58
 Style "*notitle*"	NoTitle
 Style "*skip*"		WindowListSkip
 Style "*sticky*"	Sticky
+Style "xload"		NoTitle, WindowListSkip, Sticky
+Style "xclock"		NoTitle, WindowListSkip, Sticky
 
 #
 # Specific module configuration
