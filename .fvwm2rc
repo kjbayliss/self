@@ -273,6 +273,8 @@ Key z		A	CM	GotoPage 0, 2
 Key Tab         A       M       WindowList Root c c NoDeskSort
 Key Tab         A       SM      Prev [CurrentScreen *] Focus
 
+Read $[FVWM_USERDIR]/local_key_mappings quiet
+
 
 ############################################################################
 # FvwmButtons
